@@ -1,6 +1,7 @@
 [package]
 name = "tetris"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["michealodwyer26 <michealodwyer26@gmail.com>"]
 
 [dependencies]
+sdl2 = "0.30.0"
