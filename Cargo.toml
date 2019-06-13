@@ -5,3 +5,6 @@ authors = ["michealodwyer26 <michealodwyer26@gmail.com>"]
 
 [dependencies]
 sdl2 = "0.30.0"
+
+[features]
+default = ["sdl2/image"]
