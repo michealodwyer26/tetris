@@ -30,8 +30,41 @@ enum TextureColour {
 struct Tetrimino {
     states: States,
     x: isize,
-    y: isize,
+    y: usize,
     current_state: u8
+}
+
+impl Tetrimino {
+    fn rotate(&mut self) {
+        let mut tmp_state = self.current_state + 1;
+        if tmp_state as usize >= self.states.len() {
+            self.current_state = 0;
+        }
+
+        // tests if piece will fit if translated along the x-axis by up to 3 blocks in either direction
+        let x_pos = [0, -1, 1, -2, 2, -3];
+        for x in x_pos.iter() {
+            if self.test_position(game_map, tmp_state as usize, self.x + x, self.y) {
+                self.current_state = tmp_state;
+                self.x += *x;
+                break;
+            }
+        }
+    }
+
+    fn test_position(&self, game_map: &[Vec<u8>], tmp_state: usize, x:isize, y:usize) -> bool {
+        for decal_y in 0..4 {
+            for decal_x in 0..4 {
+                let x = x + decal_x;
+                if self.states[tmp_state][decal_y][decal_x as usize] != 0 
+                    && (y + decal_y >= game_map.len() || x < 0 ||  x as usize >= game_map[y + decal_y].len() ||
+                        game_map[y + decal_y][x as usize] != 0) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 }
 
 trait TetriminoGenerator {
@@ -199,7 +232,22 @@ impl TetriminoGenerator for TetriminoT {
 }
 
 fn create_new_tetrimino() -> Tetrimino {
-    let rand_num = 
+    static mut PREV: u8 = 7;
+    let mut rand_num = rand::random::<u8>() % 7;
+    if unsafe {PREV} == rand_num {
+        rand_num = rand::random::<u8>() % 7;
+    }
+    unsafe {PREV = rand_num;}
+    match rand_num {
+        0 => TetriminoI::new(),
+        1 => TetriminoJ::new(),
+        2 => TetriminoL::new(),
+        3 => TetriminoO::new(),
+        4 => TetriminoS::new(),
+        5 => TetriminoZ::new(),
+        6 => TetriminoT::new(),
+        _ => unreachable!(),
+    }
 }
 
 fn write_to_file(content: &str, file_name: &str) -> io::Result<()> {
