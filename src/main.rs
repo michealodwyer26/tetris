@@ -1,4 +1,5 @@
 extern crate sdl2;
+extern crate rand;
 
 use sdl2::pixels::Color;
 use sdl2::event::Event;
@@ -17,10 +18,188 @@ const FPS: u32 = 60;
 const WAIT_TIME: u32 = 1_000_000_000u32 / FPS;
 const TEXTURE_SIZE: u32 = 32;
 
+type Piece = Vec<Vec<u8>>;
+type States = Vec<Piece>;
+
 #[derive(Clone, Copy)]
 enum TextureColour {
     Green, 
     Blue
+}
+
+struct Tetrimino {
+    states: States,
+    x: isize,
+    y: isize,
+    current_state: u8
+}
+
+trait TetriminoGenerator {
+    fn new() -> Tetrimino;
+}
+
+struct TetriminoI;
+
+impl TetriminoGenerator for TetriminoI {
+    fn new() -> Tetrimino {
+        Tetrimino {
+            states: vec![vec![vec![1, 1, 1, 1],
+                        vec![0, 0, 0, 0],
+                        vec![0, 0, 0, 0],
+                        vec![0, 0, 0, 0]],
+                        vec![vec![0, 1, 0, 0],
+                        vec![0, 1, 0, 0],
+                        vec![0, 1, 0, 0],
+                        vec![0, 1, 0, 0]]],
+            x: 4,
+            y: 0,
+            current_state: 0
+        }
+    }
+}
+
+struct TetriminoJ;
+
+impl TetriminoGenerator for TetriminoJ {
+    fn new() -> Tetrimino {
+        Tetrimino {
+            states: vec![vec![vec![2, 2, 2, 0],
+                            vec![2, 0, 0, 0],
+                            vec![0, 0, 0, 0],
+                            vec![0, 0, 0, 0]],
+                    vec![vec![2, 2, 0, 0],
+                        vec![0, 2, 0, 0],
+                        vec![0, 2, 0, 0],
+                        vec![0, 0, 0, 0]],
+                    vec![vec![0, 0, 2, 0],
+                        vec![2, 2, 2, 0],
+                        vec![0, 0, 0, 0],
+                        vec![0, 0, 0, 0]],
+                    vec![vec![2, 0, 0, 0],
+                        vec![2, 0, 0, 0],
+                        vec![2, 2, 0, 0],
+                        vec![0, 0, 0, 0]]],
+            x: 4,
+            y: 0,
+            current_state: 0,
+        }
+    }
+}
+
+struct TetriminoL;
+
+impl TetriminoGenerator for TetriminoL {
+    fn new() -> Tetrimino {
+        Tetrimino {
+            states: vec![vec![vec![3, 3, 3, 0],
+                            vec![0, 0, 3, 0],
+                            vec![0, 0, 0, 0],
+                            vec![0, 0, 0, 0]],
+                        vec![vec![0, 3, 0, 0],
+                            vec![0, 3, 0, 0],
+                            vec![3, 3, 0, 0],
+                            vec![0, 0, 0, 0]],
+                        vec![vec![3, 0, 0, 0],
+                            vec![3, 3, 3, 0],
+                            vec![0, 0, 0, 0],
+                            vec![0, 0, 0, 0]],
+                        vec![vec![3, 3, 0, 0],
+                            vec![3, 0, 0, 0],
+                            vec![3, 0, 0, 0],
+                            vec![0, 0, 0, 0]]],
+            x: 4,
+            y: 0,
+            current_state: 0,
+        }
+    }
+}
+struct TetriminoO;
+
+impl TetriminoGenerator for TetriminoO {
+
+    fn new() -> Tetrimino {
+        Tetrimino {
+            states: vec![vec![vec![4, 4, 0, 0],
+                            vec![4, 4, 0, 0],
+                            vec![0, 0, 0, 0],
+                            vec![0, 0, 0, 0]]],
+            x: 5,
+            y: 0,
+            current_state: 0,
+        }
+    }
+}
+
+struct TetriminoS;
+
+impl TetriminoGenerator for TetriminoS {
+    fn new() -> Tetrimino {
+        Tetrimino {
+            states: vec![vec![vec![0, 5, 5, 0],
+                            vec![5, 5, 0, 0],
+                            vec![0, 0, 0, 0],
+                            vec![0, 0, 0, 0]],
+                        vec![vec![0, 5, 0, 0],
+                            vec![0, 5, 5, 0],
+                            vec![0, 0, 5, 0],
+                            vec![0, 0, 0, 0]]],
+            x: 4,
+            y: 0,
+            current_state: 0,
+        }
+    }
+}
+
+struct TetriminoZ;
+
+impl TetriminoGenerator for TetriminoZ {
+    fn new() -> Tetrimino {
+        Tetrimino {
+            states: vec![vec![vec![6, 6, 0, 0],
+                            vec![0, 6, 6, 0],
+                            vec![0, 0, 0, 0],
+                            vec![0, 0, 0, 0]],
+                        vec![vec![0, 0, 6, 0],
+                            vec![0, 6, 6, 0],
+                            vec![0, 6, 0, 0],
+                            vec![0, 0, 0, 0]]],
+            x: 4,
+            y: 0,
+            current_state: 0,
+        }
+    }
+}
+
+struct TetriminoT;
+
+impl TetriminoGenerator for TetriminoT {
+    fn new() -> Tetrimino {
+        Tetrimino {
+            states: vec![vec![vec![7, 7, 7, 0],
+                            vec![0, 7, 0, 0],
+                            vec![0, 0, 0, 0],
+                            vec![0, 0, 0, 0]],
+                        vec![vec![0, 7, 0, 0],
+                            vec![7, 7, 0, 0],
+                            vec![0, 7, 0, 0],
+                            vec![0, 0, 0, 0]],
+                        vec![vec![0, 7, 0, 0],
+                            vec![7, 7, 7, 0],
+                            vec![0, 0, 0, 0],
+                            vec![0, 0, 0, 0]],
+                        vec![vec![0, 7, 0, 0],
+                            vec![0, 7, 7, 0],
+                            vec![0, 7, 0, 0],
+                            vec![0, 0, 0, 0]]],
+            x: 4,
+            y: 0,
+            current_state: 0,
+        }
+    }
+}
+
+fn create_new_tetrimino() -> Tetrimino {
+    let rand_num = 
 }
 
 fn write_to_file(content: &str, file_name: &str) -> io::Result<()> {
@@ -40,7 +219,7 @@ fn slice_to_string(slice: &[u32]) -> String {
 }
 
 fn string_to_slice(line: &str) -> Vec<u32> {
-    line.split(" ").filter_map(|nb| nb.parse::<u32>().ok()).collect()
+    line.split(" ").filter_map(|num| num.parse::<u32>().ok()).collect()
 }
 
 fn load_highscores_and_lines() -> Option<(Vec<u32>, Vec<u32>)> {
