@@ -127,6 +127,7 @@ dependencies = [
 name = "tetris"
 version = "0.0.1"
 dependencies = [
+ "rand 0.3.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "sdl2 0.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

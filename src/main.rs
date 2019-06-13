@@ -52,6 +52,16 @@ impl Tetrimino {
         }
     }
 
+    fn change_position(&mut self, game_map: &[Vec<u8>], new_x: isize, new_y: usize) -> bool {
+        if self.test_position(game_map, self.current_state as usize, new_x, new_y) {
+            self.x = new_x as isize;
+            self.y = new_y;
+            true
+        } else {
+            false
+        }
+    }
+
     fn test_position(&self, game_map: &[Vec<u8>], tmp_state: usize, x:isize, y:usize) -> bool {
         for decal_y in 0..4 {
             for decal_x in 0..4 {
@@ -64,6 +74,10 @@ impl Tetrimino {
             }
         }
         return true;
+    }
+
+    fn test_current_position(&self, game_map: &[Vec<u8>]) -> bool {
+        self.test_position(game_map, self.current_state as usize, self.x, self.y)
     }
 }
 
