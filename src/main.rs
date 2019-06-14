@@ -9,7 +9,7 @@ use sdl2::video::{Window, WindowContext};
 use sdl2::rect::Rect;
 use sdl2::image::{LoadTexture, INIT_PNG, INIT_JPG};
 
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use std::thread::sleep;
 use std::fs::File;
 use std::io::{self, Write, Read};
@@ -17,7 +17,11 @@ use std::io::{self, Write, Read};
 const FPS: u32 = 60;
 const WAIT_TIME: u32 = 1_000_000_000u32 / FPS;
 const TEXTURE_SIZE: u32 = 32;
-
+const LEVEL_TIMES: [u32; 10] = [1000, 850, 700, 600, 500, 400, 300, 250, 221, 190];
+const LEVEL_LINES: [u32; 10] = [20,   40,  60,  80,  100, 120, 140, 160, 180, 200];
+const NUM_HIGHSCORES: usize = 5;
+const TETRIS_HEIGHT: usize = 40;
+const HIGHSCORE_FILE: &'static str = "scores.txt";
 type Piece = Vec<Vec<u8>>;
 type States = Vec<Piece>;
 
@@ -71,6 +75,7 @@ impl Tetris {
 
     fn check_lines(&mut self) {
         let mut y = 0;
+        let mut score_add = 0;
 
         while y < self.game_map.len() {
             let mut complete = true;
@@ -82,17 +87,24 @@ impl Tetris {
                 }
             }
             if complete {
+                score_add += self.current_level;
                 self.game_map.remove(y);
                 y -= 1;
             }
             y += 1;
         }
+        if self.game_map.len() == 0 {
+            score_add += 1000;
+        }
+        self.update_score(score_add);
         while self.game_map.len() < 16 {
+            self.increase_line();
             self.game_map.insert(0, vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
         }
     }
 
     fn make_permanent(&mut self) {
+        let mut to_add = 0;
         if let Some(ref mut piece) = self.current_piece {
             let mut shift_y = 0;
 
@@ -109,9 +121,22 @@ impl Tetris {
                 }
                 shift_y += 1;
             }
+            to_add += self.current_level;
         }
+        self.update_score(to_add);
         self.check_lines();
         self.current_piece = None;
+    }
+
+    fn update_score(&mut self, to_add: u32) {
+        self.score += to_add;
+    }
+
+    fn increase_line(&mut self) {
+        self.num_lines += 1;
+        if self.num_lines > LEVEL_LINES[self.current_level as usize - 1] {
+            self.current_level += 1;
+        }
     }
 }
 
@@ -123,7 +148,7 @@ struct Tetrimino {
 }
 
 impl Tetrimino {
-    fn rotate(&mut self) {
+    fn rotate(&mut self, game_map: &[Vec<u8>]) {
         let mut tmp_state = self.current_state + 1;
         if tmp_state as usize >= self.states.len() {
             self.current_state = 0;
@@ -333,25 +358,6 @@ impl TetriminoGenerator for TetriminoT {
     }
 }
 
-// fn create_new_tetrimino() -> Tetrimino {
-//     static mut PREV: u8 = 7;
-//     let mut rand_num = rand::random::<u8>() % 7;
-//     if unsafe {PREV} == rand_num {
-//         rand_num = rand::random::<u8>() % 7;
-//     }
-//     unsafe {PREV = rand_num;}
-//     match rand_num {
-//         0 => TetriminoI::new(),
-//         1 => TetriminoJ::new(),
-//         2 => TetriminoL::new(),
-//         3 => TetriminoO::new(),
-//         4 => TetriminoS::new(),
-//         5 => TetriminoZ::new(),
-//         6 => TetriminoT::new(),
-//         _ => unreachable!(),
-//     }
-// }
-
 fn write_to_file(content: &str, file_name: &str) -> io::Result<()> {
     let mut f = File::create(file_name)?;
     f.write_all(content.as_bytes())
@@ -392,6 +398,22 @@ fn save_highscores_and_lines(highscores: &[u32], num_of_lines: &[u32]) -> bool {
     write_to_file(format!("{}\n{}\n", s_highscores, s_num_of_lines).as_str(), "scores.txt").is_ok()
 }
 
+fn update_vec(v: &mut Vec<u32>, value: u32) -> bool {
+    if v.len() < NUM_HIGHSCORES {
+        v.push(value);
+        v.sort();
+        true 
+    } else {
+        for entry in v.iter_mut() {
+            if value > *entry {
+                *entry = value;
+                return true
+            }
+        }
+        false
+    }
+}
+
 fn create_texture_rect<'a>(canvas: &mut Canvas<Window>, texture_creator: &'a TextureCreator<WindowContext>, 
     colour: TextureColour, size: u32) -> Option<Texture<'a>>{
     if let Ok(mut square_texture) = texture_creator.create_texture_target(None, size, size) {
@@ -418,17 +440,17 @@ fn handle_events(tetris: &mut Tetris, quit: &mut bool, timer: &mut SystemTime, e
             match event {
                 Event::Quit {..} | Event::KeyDown {keycode: Some(Keycode::Escape), ..} => {*quit = true; break},
                 Event::KeyDown{keycode: Some(Keycode::Down), ..} => {*timer = SystemTime::now(); tmp_y += 1},
-                Event::KeyDown{keycode: Some(Keycode::Right), ..} => tmp_x += 1
-                Event::Keydown{keycode: Some(Keycode::Left), ..} => tmp_x -= 1
-                Event::Keydown{keycode: Some(Keycode::Up), ..} => piece.rotate(&tetris.game_map)
-                Event::Keydown{keycode: Some(Keycode::Space), ..} => {
+                Event::KeyDown{keycode: Some(Keycode::Right), ..} => tmp_x += 1,
+                Event::KeyDown{keycode: Some(Keycode::Left), ..} => tmp_x -= 1,
+                Event::KeyDown{keycode: Some(Keycode::Up), ..} => piece.rotate(&tetris.game_map),
+                Event::KeyDown{keycode: Some(Keycode::Space), ..} => {
                     let x = piece.x; 
                     let mut y = piece.y;
                     while piece.change_position(&tetris.game_map, x, y +1) {
                         y += 1;
                     }
                     make_permanent = true
-                }
+                },
                 _ => {}
             }
         }
@@ -445,44 +467,75 @@ fn handle_events(tetris: &mut Tetris, quit: &mut bool, timer: &mut SystemTime, e
     make_permanent
 }
 
+fn print_game_info(tetris: &Tetris) {
+    let mut new_highest_highscore = true;
+    let mut new_highest_lines_sent = true;
+    if let Some((mut highscores, mut lines_sent)) = load_highscores_and_lines() {
+        new_highest_highscore = update_vec(&mut highscores, tetris.score);
+        new_highest_lines_sent = update_vec(&mut lines_sent, tetris.num_lines);
+        if new_highest_highscore || new_highest_lines_sent {
+            save_highscores_and_lines(&highscores, &lines_sent);
+        }
+    } else {
+        save_highscores_and_lines(&[tetris.score], &[tetris.num_lines]);
+    }
+    println!("Game over...");
+    println!("Score:            {}{}", tetris.score, if new_highest_highscore {"[NEW HIGHSCORE]"} else {""});
+    println!("Number of lines:  {}{}", tetris.num_lines, if new_highest_lines_sent {"[NEW HIGHSCORE]"} else {""});
+    println!("Current level:    {}", tetris.current_level);
+}
+
+fn is_time_over(tetris: &Tetris, timer: &SystemTime) -> bool {
+    match timer.elapsed() {
+        Ok(elapsed) => {
+            let millis = elapsed.as_secs() as u32 * 1000 + elapsed.subsec_nanos() / 1_000_000;
+            millis > LEVEL_TIMES[tetris.current_level as usize - 1]
+        }
+        Err(_) => false
+    }
+}
+
 pub fn main() {
     let sdl_context = sdl2::init().expect("SDL initialization failed.");
-    let video_subsystem = sdl_context.video().expect("SDL video subsystem failed.");
+    let mut tetris = Tetris::new();
+    let mut timer = SystemTime::now();
+    let mut event_pump = sdl_context.event_pump().expect("Failed to get SDL event pump");
 
-    let window = video_subsystem.window("Tetris.rs", 800, 600)
-        .position_centered()
-        .opengl()
-        .build()
-        .expect("Failed to create window");
+    // let grid_x = (width - TETRIS_HEIGHT as u32 * 10) as i32 / 2;
+    // let grid_y = (height - TETRIS_HEIGHT as u32 * 16) as i32 / 2;
+    loop {
+        if is_time_over(&tetris, &timer) {
+            let mut make_permanent = false;
+            if let Some(ref mut piece) = tetris.current_piece {
+                let x = piece.x;
+                let y = piece.y + 1;
+                make_permanent = !piece.change_position(&tetris.game_map, x, y);
+            }
+            if make_permanent {
+                tetris.make_permanent();
+            }
+            timer = SystemTime::now();
+        }
 
-    let mut canvas = window.into_canvas().build().expect("Failed to convert window to canvas.");
-    sdl2::image::init(INIT_PNG | INIT_JPG).expect("Failed to initialise image context.");
-    
-    let texture_creator: TextureCreator<_> = canvas.texture_creator();
-    let image_texture = texture_creator.load_texture("assets/img.png").expect("Failed to load image.");
-
-    
-    canvas.present();
-
-    let mut event_pump = sdl_context.event_pump().expect("Failed to get SDL event pump.");
-
-    let mut blue_square = create_texture_rect(&mut canvas, &texture_creator, TextureColour::Blue, TEXTURE_SIZE)
-        .expect("Failed to create texture.");
-    let mut green_square = create_texture_rect(&mut canvas, &texture_creator, TextureColour::Green, TEXTURE_SIZE)
-        .expect("Failed to create texture.");
-
-    'running: loop {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. } | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => { break 'running },
-                _ => {}
+        if tetris.current_piece.is_none() {
+            let current_piece = tetris.create_new_tetrimino();
+            if !current_piece.test_current_position(&tetris.game_map) {
+                print_game_info(&tetris);
+                break
+            }
+            tetris.current_piece = Some(current_piece);
+        }
+        let mut quit = false;
+        if !handle_events(&mut tetris, &mut quit, &mut timer, &mut event_pump) {
+            if let Some(ref mut piece) = tetris.current_piece {
+                // draw current tetrimino piece
             }
         }
-        canvas.set_draw_color(Color::RGB(255, 0, 0));
-        canvas.clear();
-        canvas.copy(&image_texture, None, None).expect("Failed to render image.");
-        canvas.present();
-
-        sleep(Duration::new(0, WAIT_TIME));
+        if quit {
+            print_game_info(&tetris);
+            break
     }
+
+    sleep(Duration::new(0, WAIT_TIME));
+}
 }
