@@ -7,7 +7,7 @@ use sdl2::keyboard::Keycode;
 use sdl2::render::{Canvas, Texture, TextureCreator};
 use sdl2::video::{Window, WindowContext};
 use sdl2::rect::Rect;
-use sdl2::image::{LoadTexture, INIT_PNG, INIT_JPG};
+//use sdl2::image::{LoadTexture, INIT_PNG, INIT_JPG};
 
 use std::time::{Duration, SystemTime};
 use std::thread::sleep;
@@ -16,20 +16,15 @@ use std::io::{self, Write, Read};
 
 const FPS: u32 = 60;
 const WAIT_TIME: u32 = 1_000_000_000u32 / FPS;
-const TEXTURE_SIZE: u32 = 32;
+// const TEXTURE_SIZE: u32 = 32;
 const LEVEL_TIMES: [u32; 10] = [1000, 850, 700, 600, 500, 400, 300, 250, 221, 190];
 const LEVEL_LINES: [u32; 10] = [20,   40,  60,  80,  100, 120, 140, 160, 180, 200];
 const NUM_HIGHSCORES: usize = 5;
 const TETRIS_HEIGHT: usize = 40;
 const HIGHSCORE_FILE: &'static str = "scores.txt";
+
 type Piece = Vec<Vec<u8>>;
 type States = Vec<Piece>;
-
-#[derive(Clone, Copy)]
-enum TextureColour {
-    Green, 
-    Blue
-}
 
 struct Tetris {
     game_map: Vec<Vec<u8>>,
