@@ -7,7 +7,7 @@ use sdl2::keyboard::Keycode;
 use sdl2::render::{Canvas, Texture, TextureCreator};
 use sdl2::video::{Window, WindowContext};
 use sdl2::rect::Rect;
-//use sdl2::image::{LoadTexture, INIT_PNG, INIT_JPG};
+use sdl2::image::{LoadTexture, INIT_PNG};
 
 use std::time::{Duration, SystemTime};
 use std::thread::sleep;
@@ -374,7 +374,7 @@ fn string_to_slice(line: &str) -> Vec<u32> {
 }
 
 fn load_highscores_and_lines() -> Option<(Vec<u32>, Vec<u32>)> {
-    if let Ok(content) = read_from_file("scores.txt") {
+    if let Ok(content) = read_from_file(HIGHSCORE_FILE) {
         let mut lines = content.splitn(2, "\n").map(|line| string_to_slice(line)).collect::<Vec<_>>();
         if lines.len() == 2 {
             let (number_lines, highscores) = (lines.pop().unwrap(), lines.pop().unwrap());
@@ -390,7 +390,7 @@ fn load_highscores_and_lines() -> Option<(Vec<u32>, Vec<u32>)> {
 fn save_highscores_and_lines(highscores: &[u32], num_of_lines: &[u32]) -> bool {
     let s_highscores = slice_to_string(highscores);
     let s_num_of_lines = slice_to_string(num_of_lines);
-    write_to_file(format!("{}\n{}\n", s_highscores, s_num_of_lines).as_str(), "scores.txt").is_ok()
+    write_to_file(format!("{}\n{}\n", s_highscores, s_num_of_lines).as_str(), HIGHSCORE_FILE).is_ok()
 }
 
 fn update_vec(v: &mut Vec<u32>, value: u32) -> bool {
@@ -490,9 +490,10 @@ fn is_time_over(tetris: &Tetris, timer: &SystemTime) -> bool {
 pub fn main() {
     let sdl_context = sdl2::init().expect("SDL initialization failed.");
     let video_subsystem = sdl_context.video().expect("SDL video subsystem initialisation failed.");
+    sdl2::image::init(INIT_PNG).expect("Failed to initialise the image context.");
     
     let width = 600;
-    let height = 800;
+    let height = 700;
 
     let mut tetris = Tetris::new();
     let mut timer = SystemTime::now();
@@ -520,14 +521,22 @@ pub fn main() {
     let border = create_texture_rect(&mut canvas, &texture_creator, 255, 255, 255, TETRIS_HEIGHT as u32 * 10 + 20, 
         TETRIS_HEIGHT as u32 * 16 + 20).expect("Failed to create texture.");
 
-    macro_rules! texture {
-        ($r: expr, $g: expr, $b: expr) => (
-            create_texture_rect(&mut canvas, &texture_creator, $r, $g, $b, TETRIS_HEIGHT as u32, TETRIS_HEIGHT as u32).unwrap()
-        )
-    }
+    // macro_rules! texture {
+    //     ($r: expr, $g: expr, $b: expr) => (
+    //         create_texture_rect(&mut canvas, &texture_creator, $r, $g, $b, TETRIS_HEIGHT as u32, TETRIS_HEIGHT as u32).unwrap()
+    //     )
+    // }
 
-    let textures = [texture!(255, 69, 69), texture!(255, 220, 69), texture!(237, 150, 37), texture!(171, 99, 237), texture!(77, 149, 239),
-        texture!(39, 218, 225), texture!(45, 216, 47)];
+    // let textures = [texture!(255, 69, 69), texture!(255, 220, 69), texture!(237, 150, 37), texture!(171, 99, 237), texture!(77, 149, 239),
+    //     texture!(39, 218, 225), texture!(45, 216, 47)];
+
+    let textures = [texture_creator.load_texture("assets/I.png").expect("Couldn't load image."), 
+        texture_creator.load_texture("assets/L.png").expect("Couldn't load image."), 
+        texture_creator.load_texture("assets/R.png").expect("Couldn't load image."), 
+        texture_creator.load_texture("assets/S.png").expect("Couldn't load image."), 
+        texture_creator.load_texture("assets/T.png").expect("Couldn't load image."),
+        texture_creator.load_texture("assets/S.png").expect("Couldn't load image."), 
+        texture_creator.load_texture("assets/L.png").expect("Couldn't load image.")];
     
     loop {
         if is_time_over(&tetris, &timer) {
