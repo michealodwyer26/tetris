@@ -20,8 +20,20 @@ const WAIT_TIME: u32 = 1_000_000_000u32 / FPS;
 const LEVEL_TIMES: [u32; 10] = [1000, 850, 700, 600, 500, 400, 300, 250, 221, 190];
 const LEVEL_LINES: [u32; 10] = [20,   40,  60,  80,  100, 120, 140, 160, 180, 200];
 const NUM_HIGHSCORES: usize = 5;
-const TETRIS_HEIGHT: usize = 40;
 const HIGHSCORE_FILE: &'static str = "scores.txt";
+
+const TETRIS_HEIGHT: usize = 40;
+const ORIGIN_X: i32 = 0;
+const ORIGIN_Y: i32 = 0;
+const GRID_ORIGIN_X: i32 = 10;
+const GRID_ORIGIN_Y : i32 = 10;
+const GRID_WIDTH: u32 = TETRIS_HEIGHT as u32 * 10;
+const GRID_HEIGHT: u32 = TETRIS_HEIGHT as u32 * 16;
+const BORDER_SIZE: u32 = 10;
+const BORDER_WIDTH: u32 = GRID_WIDTH + (BORDER_SIZE * 2);
+const BORDER_HEIGHT: u32 = GRID_HEIGHT + (BORDER_SIZE * 2);
+const WINDOW_WIDTH: u32 = BORDER_WIDTH + (BORDER_WIDTH / 2);
+const WINDOW_HEIGHT: u32 = BORDER_HEIGHT;
 
 type Piece = Vec<Vec<u8>>;
 type States = Vec<Piece>;
@@ -491,18 +503,12 @@ pub fn main() {
     let sdl_context = sdl2::init().expect("SDL initialization failed.");
     let video_subsystem = sdl_context.video().expect("SDL video subsystem initialisation failed.");
     sdl2::image::init(INIT_PNG).expect("Failed to initialise the image context.");
-    
-    let width = 600;
-    let height = 700;
 
     let mut tetris = Tetris::new();
     let mut timer = SystemTime::now();
     let mut event_pump = sdl_context.event_pump().expect("Failed to get SDL event pump");
 
-    let grid_x = (width - TETRIS_HEIGHT as u32 * 10) as i32 / 2;
-    let grid_y = (height - TETRIS_HEIGHT as u32 * 16) as i32 / 2;
-
-    let window = video_subsystem.window("Tetris.rs", width, height)
+    let window = video_subsystem.window("Tetris.rs", WINDOW_WIDTH, WINDOW_HEIGHT)
         .position_centered() 
         .build() 
         .expect("Failed to create window.");
@@ -515,11 +521,11 @@ pub fn main() {
 
     let texture_creator: TextureCreator<_> = canvas.texture_creator();
 
-    let grid = create_texture_rect(&mut canvas, &texture_creator, 0, 0, 0, TETRIS_HEIGHT as u32 * 10, TETRIS_HEIGHT as u32 * 16)
+    let grid = create_texture_rect(&mut canvas, &texture_creator, 0, 0, 0, GRID_WIDTH, GRID_HEIGHT)
         .expect("Failed to create texture.");
 
-    let border = create_texture_rect(&mut canvas, &texture_creator, 255, 255, 255, TETRIS_HEIGHT as u32 * 10 + 20, 
-        TETRIS_HEIGHT as u32 * 16 + 20).expect("Failed to create texture.");
+    let border = create_texture_rect(&mut canvas, &texture_creator, 255, 255, 255, BORDER_WIDTH, BORDER_WIDTH)
+        .expect("Failed to create texture.");
 
     // macro_rules! texture {
     //     ($r: expr, $g: expr, $b: expr) => (
@@ -552,17 +558,15 @@ pub fn main() {
             timer = SystemTime::now();
         }
 
-        canvas.set_draw_color(Color::RGB(255, 0, 0));
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
             canvas.clear();
             canvas.copy(&border, 
                 None, 
-                Rect::new((width - TETRIS_HEIGHT as u32 * 10) as i32 / 2 - 10, (height - TETRIS_HEIGHT as u32 * 16) as i32 / 2 - 10, 
-                            TETRIS_HEIGHT as u32 * 10 + 20, TETRIS_HEIGHT as u32 * 16 + 20))
+                Rect::new(ORIGIN_X, ORIGIN_Y, BORDER_WIDTH, BORDER_HEIGHT))
                     .expect("Failed to copy texture to window.");
             canvas.copy(&grid, 
                 None, 
-                Rect::new((width - TETRIS_HEIGHT as u32 * 10) as i32 / 2, (height - TETRIS_HEIGHT as u32 * 16) as i32 / 2, 
-                            TETRIS_HEIGHT as u32 * 10, TETRIS_HEIGHT as u32 * 16))
+                Rect::new(GRID_ORIGIN_X, GRID_ORIGIN_Y, GRID_WIDTH, GRID_HEIGHT))
                     .expect("Failed to copy texture to window.");
 
         if tetris.current_piece.is_none() {
@@ -573,7 +577,9 @@ pub fn main() {
             }
             tetris.current_piece = Some(current_piece);
         }
+
         let mut quit = false;
+        
         if !handle_events(&mut tetris, &mut quit, &mut timer, &mut event_pump) {
             if let Some(ref mut piece) = tetris.current_piece {
                 for (line_num, line) in piece.states[piece.current_state as usize].iter().enumerate() {
@@ -583,8 +589,8 @@ pub fn main() {
                         }
                     canvas.copy(&textures[*case as usize - 1],
                                 None, 
-                                Rect::new(grid_x + (piece.x + case_num as isize) as i32 * TETRIS_HEIGHT as i32, 
-                                        grid_y + (piece.y + line_num) as i32 * TETRIS_HEIGHT as i32, 
+                                Rect::new(GRID_ORIGIN_X + (piece.x + case_num as isize) as i32 * TETRIS_HEIGHT as i32, 
+                                        GRID_ORIGIN_Y + (piece.y + line_num) as i32 * TETRIS_HEIGHT as i32, 
                                         TETRIS_HEIGHT as u32, TETRIS_HEIGHT as u32))
                         .expect("Failed to copy texture to window");
                     }
@@ -599,7 +605,7 @@ pub fn main() {
                 }
                 canvas.copy(&textures[*case as usize - 1], 
                             None, 
-                            Rect::new(grid_x + case_num as i32 * TETRIS_HEIGHT as i32, grid_y + line_num as i32 * TETRIS_HEIGHT as i32,
+                            Rect::new(GRID_ORIGIN_X + case_num as i32 * TETRIS_HEIGHT as i32, GRID_ORIGIN_Y + line_num as i32 * TETRIS_HEIGHT as i32,
                                     TETRIS_HEIGHT as u32, TETRIS_HEIGHT as u32))
                     .expect("Failed to copy texture to window.");
             }
