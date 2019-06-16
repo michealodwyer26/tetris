@@ -16,7 +16,6 @@ use std::io::{self, Write, Read};
 
 const FPS: u32 = 60;
 const WAIT_TIME: u32 = 1_000_000_000u32 / FPS;
-// const TEXTURE_SIZE: u32 = 32;
 const LEVEL_TIMES: [u32; 10] = [1000, 850, 700, 600, 500, 400, 300, 250, 221, 190];
 const LEVEL_LINES: [u32; 10] = [20,   40,  60,  80,  100, 120, 140, 160, 180, 200];
 const NUM_HIGHSCORES: usize = 5;
@@ -499,10 +498,39 @@ fn is_time_over(tetris: &Tetris, timer: &SystemTime) -> bool {
     }
 }
 
+fn create_texture_from_text<'a>(texture_creator: &'a TextureCreator<WindowContext>, 
+    font: &sdl2::ttf::Font, text: &str, r: u8, g:u8, b: u8) -> Option<Texture<'a>> {
+        if let Ok(surface) = font.render(text).blended(Color::RGB(r, g, b)) {
+            texture_creator.create_texture_from_surface(&surface).ok()
+        } else {
+            None
+        }
+}
+
+fn get_rect_from_text(text: &str, x: i32, y:i32) -> Option<Rect> {
+    Some(Rect::new(x, y, text.len() as u32 * 10, 30))
+}
+
+fn display_game_information<'a>(tetris: &Tetris, canvas: &mut Canvas<Window>, texture_creator: &'a TextureCreator<WindowContext>,
+    font: &sdl2::ttf::Font, start_x_point: i32) {
+    let score_text = format!("Score: {}", tetris.score);
+    let lines_sent_text = format!("Lines sent: {}", tetris.num_lines);
+    let level_text = format!("Level: {}", tetris.current_level);
+
+    let score = create_texture_from_text(&texture_creator, &font, &score_text, 255, 255, 255).expect("Cannot render text.");
+    let lines_sent = create_texture_from_text(&texture_creator, &font, &lines_sent_text, 255, 255, 255).expect("Cannot render text.");
+    let level = create_texture_from_text(&texture_creator, &font, &level_text, 255, 255, 255).expect("Cannot render text.");
+
+    canvas.copy(&score, None, get_rect_from_text(&score_text, start_x_point, 30)).expect("Couldn't render text.");
+    canvas.copy(&lines_sent, None, get_rect_from_text(&lines_sent_text, start_x_point, 75)).expect("Couldn't render text.");
+    canvas.copy(&level, None, get_rect_from_text(&level_text, start_x_point, 120)).expect("Couldn't render text.");
+}
+
 pub fn main() {
     let sdl_context = sdl2::init().expect("SDL initialization failed.");
     let video_subsystem = sdl_context.video().expect("SDL video subsystem initialisation failed.");
     sdl2::image::init(INIT_PNG).expect("Failed to initialise the image context.");
+    let ttf_context = sdl2::ttf::init().expect("Failed to initialise SDL ttf.");
 
     let mut tetris = Tetris::new();
     let mut timer = SystemTime::now();
@@ -536,13 +564,16 @@ pub fn main() {
     // let textures = [texture!(255, 69, 69), texture!(255, 220, 69), texture!(237, 150, 37), texture!(171, 99, 237), texture!(77, 149, 239),
     //     texture!(39, 218, 225), texture!(45, 216, 47)];
 
-    let textures = [texture_creator.load_texture("assets/I.png").expect("Couldn't load image."), 
-        texture_creator.load_texture("assets/L.png").expect("Couldn't load image."), 
-        texture_creator.load_texture("assets/R.png").expect("Couldn't load image."), 
-        texture_creator.load_texture("assets/S.png").expect("Couldn't load image."), 
-        texture_creator.load_texture("assets/T.png").expect("Couldn't load image."),
-        texture_creator.load_texture("assets/S.png").expect("Couldn't load image."), 
-        texture_creator.load_texture("assets/L.png").expect("Couldn't load image.")];
+    let textures = [texture_creator.load_texture("assets/1.png").expect("Couldn't load image."), 
+        texture_creator.load_texture("assets/2.png").expect("Couldn't load image."), 
+        texture_creator.load_texture("assets/3.png").expect("Couldn't load image."), 
+        texture_creator.load_texture("assets/4.png").expect("Couldn't load image."), 
+        texture_creator.load_texture("assets/5.png").expect("Couldn't load image."),
+        texture_creator.load_texture("assets/6.png").expect("Couldn't load image."), 
+        texture_creator.load_texture("assets/7.png").expect("Couldn't load image.")];
+
+    let mut font = ttf_context.load_font("assets/Inconsolata-Regular.ttf", 128).expect("Failed to load image.");
+    font.set_style(sdl2::ttf::STYLE_BOLD);
     
     loop {
         if is_time_over(&tetris, &timer) {
@@ -559,12 +590,12 @@ pub fn main() {
         }
 
         canvas.set_draw_color(Color::RGB(0, 0, 0));
-            canvas.clear();
-            canvas.copy(&border, 
+        canvas.clear();
+        canvas.copy(&border, 
                 None, 
                 Rect::new(ORIGIN_X, ORIGIN_Y, BORDER_WIDTH, BORDER_HEIGHT))
                     .expect("Failed to copy texture to window.");
-            canvas.copy(&grid, 
+        canvas.copy(&grid, 
                 None, 
                 Rect::new(GRID_ORIGIN_X, GRID_ORIGIN_Y, GRID_WIDTH, GRID_HEIGHT))
                     .expect("Failed to copy texture to window.");
@@ -610,6 +641,8 @@ pub fn main() {
                     .expect("Failed to copy texture to window.");
             }
         }
+
+        display_game_information(&tetris, &mut canvas, &texture_creator, &font, BORDER_WIDTH as i32 + 30);
 
         canvas.present();
 
