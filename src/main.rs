@@ -51,7 +51,7 @@ impl Tetris {
             current_level: 1,
             score: 0,
             num_lines: 0,
-            current_piece: None,
+            current_piece: None
         }
     }
 
@@ -428,7 +428,8 @@ fn create_texture_rect<'a>(canvas: &mut Canvas<Window>, texture_creator: &'a Tex
     }
 }
 
-fn handle_events(tetris: &mut Tetris, quit: &mut bool, timer: &mut SystemTime, event_pump: &mut sdl2::EventPump) -> bool {
+fn handle_events(tetris: &mut Tetris, quit: &mut bool, timer: &mut SystemTime, event_pump: &mut sdl2::EventPump, 
+    paused: &mut bool) -> bool {
     let mut make_permanent = false;
     if let Some(ref mut piece) = tetris.current_piece {
         let mut tmp_x = piece.x;
@@ -437,6 +438,7 @@ fn handle_events(tetris: &mut Tetris, quit: &mut bool, timer: &mut SystemTime, e
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} | Event::KeyDown {keycode: Some(Keycode::Escape), ..} => {*quit = true; break},
+                Event::KeyDown{keycode: Some(Keycode::P), ..} => {*paused = !*paused; break},
                 Event::KeyDown{keycode: Some(Keycode::Down), ..} => {*timer = SystemTime::now(); tmp_y += 1},
                 Event::KeyDown{keycode: Some(Keycode::Right), ..} => tmp_x += 1,
                 Event::KeyDown{keycode: Some(Keycode::Left), ..} => tmp_x -= 1,
@@ -549,9 +551,11 @@ pub fn main() {
 
     let mut font = ttf_context.load_font("assets/Inconsolata-Regular.ttf", 128).expect("Failed to load image.");
     font.set_style(sdl2::ttf::STYLE_BOLD);
+
+    let mut paused = false;
     
     loop {
-        if is_time_over(&tetris, &timer) {
+        if is_time_over(&tetris, &timer) && !paused {
             let mut make_permanent = false;
             if let Some(ref mut piece) = tetris.current_piece {
                 let x = piece.x;
@@ -582,7 +586,7 @@ pub fn main() {
 
         let mut quit = false;
         
-        if !handle_events(&mut tetris, &mut quit, &mut timer, &mut event_pump) {
+        if !handle_events(&mut tetris, &mut quit, &mut timer, &mut event_pump, &mut paused) {
             if let Some(ref mut piece) = tetris.current_piece {
                 for (line_num, line) in piece.states[piece.current_state as usize].iter().enumerate() {
                     for (case_num, case) in line.iter().enumerate() {
