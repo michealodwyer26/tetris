@@ -24,15 +24,12 @@ const HIGHSCORE_FILE: &'static str = "scores.txt";
 const TETRIS_HEIGHT: usize = 40;
 const ORIGIN_X: i32 = 0;
 const ORIGIN_Y: i32 = 0;
-const GRID_ORIGIN_X: i32 = 10;
-const GRID_ORIGIN_Y : i32 = 10;
+const GRID_ORIGIN_X: i32 = 0;
+const GRID_ORIGIN_Y : i32 = 0;
 const GRID_WIDTH: u32 = TETRIS_HEIGHT as u32 * 10;
 const GRID_HEIGHT: u32 = TETRIS_HEIGHT as u32 * 16;
-const BORDER_SIZE: u32 = 10;
-const BORDER_WIDTH: u32 = GRID_WIDTH + (BORDER_SIZE * 2);
-const BORDER_HEIGHT: u32 = GRID_HEIGHT + (BORDER_SIZE * 2);
-const WINDOW_WIDTH: u32 = BORDER_WIDTH + (BORDER_WIDTH / 2);
-const WINDOW_HEIGHT: u32 = BORDER_HEIGHT;
+const WINDOW_WIDTH: u32 = GRID_WIDTH;
+const WINDOW_HEIGHT: u32 = GRID_HEIGHT;
 
 type Piece = Vec<Vec<u8>>;
 type States = Vec<Piece>;
@@ -42,7 +39,8 @@ struct Tetris {
     current_level: u32,
     score: u32,
     num_lines: u32,
-    current_piece: Option<Tetrimino>
+    current_piece: Option<Tetrimino>,
+    next_piece: Option<Tetrimino>
 }
 
 impl Tetris {
@@ -56,7 +54,8 @@ impl Tetris {
             current_level: 1,
             score: 0,
             num_lines: 0,
-            current_piece: None
+            current_piece: None,
+            next_piece: None
         }
     }
 
@@ -150,7 +149,7 @@ struct Tetrimino {
     states: States,
     x: isize,
     y: usize,
-    current_state: u8
+    current_state: u8,
 }
 
 impl Tetrimino {
@@ -511,19 +510,26 @@ fn get_rect_from_text(text: &str, x: i32, y:i32) -> Option<Rect> {
     Some(Rect::new(x, y, text.len() as u32 * 10, 30))
 }
 
-fn display_game_information<'a>(tetris: &Tetris, canvas: &mut Canvas<Window>, texture_creator: &'a TextureCreator<WindowContext>,
-    font: &sdl2::ttf::Font, start_x_point: i32) {
+// fn display_game_information<'a>(tetris: &Tetris, canvas: &mut Canvas<Window>, texture_creator: &'a TextureCreator<WindowContext>,
+//     font: &sdl2::ttf::Font, start_x_point: i32) {
+//     let score_text = format!("Score: {}", tetris.score);
+//     let lines_sent_text = format!("Lines sent: {}", tetris.num_lines);
+//     let level_text = format!("Level: {}", tetris.current_level);
+
+//     let score = create_texture_from_text(&texture_creator, &font, &score_text, 255, 255, 255).expect("Cannot render text.");
+//     let lines_sent = create_texture_from_text(&texture_creator, &font, &lines_sent_text, 255, 255, 255).expect("Cannot render text.");
+//     let level = create_texture_from_text(&texture_creator, &font, &level_text, 255, 255, 255).expect("Cannot render text.");
+
+//     canvas.copy(&score, None, get_rect_from_text(&score_text, start_x_point, 30)).expect("Couldn't render text.");
+//     canvas.copy(&lines_sent, None, get_rect_from_text(&lines_sent_text, start_x_point, 75)).expect("Couldn't render text.");
+//     canvas.copy(&level, None, get_rect_from_text(&level_text, start_x_point, 120)).expect("Couldn't render text.");
+// }
+
+fn display_score<'a>(tetris: &Tetris, canvas: &mut Canvas<Window>, texture_creator: &'a TextureCreator<WindowContext>, 
+    font: &sdl2::ttf::Font, x: i32) {
     let score_text = format!("Score: {}", tetris.score);
-    let lines_sent_text = format!("Lines sent: {}", tetris.num_lines);
-    let level_text = format!("Level: {}", tetris.current_level);
-
     let score = create_texture_from_text(&texture_creator, &font, &score_text, 255, 255, 255).expect("Cannot render text.");
-    let lines_sent = create_texture_from_text(&texture_creator, &font, &lines_sent_text, 255, 255, 255).expect("Cannot render text.");
-    let level = create_texture_from_text(&texture_creator, &font, &level_text, 255, 255, 255).expect("Cannot render text.");
-
-    canvas.copy(&score, None, get_rect_from_text(&score_text, start_x_point, 30)).expect("Couldn't render text.");
-    canvas.copy(&lines_sent, None, get_rect_from_text(&lines_sent_text, start_x_point, 75)).expect("Couldn't render text.");
-    canvas.copy(&level, None, get_rect_from_text(&level_text, start_x_point, 120)).expect("Couldn't render text.");
+    canvas.copy(&score, None, get_rect_from_text(&score_text, x, 0)).expect("Couldn't render text.");
 }
 
 pub fn main() {
@@ -552,8 +558,8 @@ pub fn main() {
     let grid = create_texture_rect(&mut canvas, &texture_creator, 0, 0, 0, GRID_WIDTH, GRID_HEIGHT)
         .expect("Failed to create texture.");
 
-    let border = create_texture_rect(&mut canvas, &texture_creator, 255, 255, 255, BORDER_WIDTH, BORDER_WIDTH)
-        .expect("Failed to create texture.");
+    // let border = create_texture_rect(&mut canvas, &texture_creator, 255, 255, 255, BORDER_WIDTH, BORDER_WIDTH)
+    //     .expect("Failed to create texture.");
 
     // macro_rules! texture {
     //     ($r: expr, $g: expr, $b: expr) => (
@@ -591,14 +597,20 @@ pub fn main() {
 
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
-        canvas.copy(&border, 
-                None, 
-                Rect::new(ORIGIN_X, ORIGIN_Y, BORDER_WIDTH, BORDER_HEIGHT))
-                    .expect("Failed to copy texture to window.");
+        // canvas.copy(&border, 
+        //         None, 
+        //         Rect::new(ORIGIN_X, ORIGIN_Y, BORDER_WIDTH, BORDER_HEIGHT))
+        //             .expect("Failed to copy texture to window.");
         canvas.copy(&grid, 
                 None, 
                 Rect::new(GRID_ORIGIN_X, GRID_ORIGIN_Y, GRID_WIDTH, GRID_HEIGHT))
                     .expect("Failed to copy texture to window.");
+
+        // if tetris.next_piece.is_none() {
+        //     let next_piece = tetris.create_new_tetrimino();
+        //     println!("here");
+        //     tetris.next_piece = Some(next_piece);
+        // }
 
         if tetris.current_piece.is_none() {
             let current_piece = tetris.create_new_tetrimino();
@@ -642,7 +654,8 @@ pub fn main() {
             }
         }
 
-        display_game_information(&tetris, &mut canvas, &texture_creator, &font, BORDER_WIDTH as i32 + 30);
+        // display_game_information(&tetris, &mut canvas, &texture_creator, &font, 10 as i32);
+        display_score(&tetris, &mut canvas, &texture_creator, &font, WINDOW_WIDTH as i32 - 110);
 
         canvas.present();
 
